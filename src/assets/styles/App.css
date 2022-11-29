@@ -25,29 +25,15 @@ p {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
+    background-color: #fafdff;
 }
 
-.do-it-column {
-    background-color: #fff0f0;
-}
-
-.in-progress-column {
-    background-color: #fef2e7;
-}
-
-.awaiting-review-column {
-    background-color: #fffada;
-}
-
-.done-column {
-    background-color: #f5ffe5;
-}
 
 .movable-item {
     border-radius: 5px;
     background-color: #fafdff;
-    height: 100px;
-    width: 140px;
+    height: 40px;
+    width: calc(100% - 50px);
     margin: 10px auto;
     display: flex;
     justify-content: center;

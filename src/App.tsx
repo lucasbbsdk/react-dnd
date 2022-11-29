@@ -1,150 +1,49 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { Button, FormControl, Grid, IconButton, InputLabel, makeStyles, MenuItem, Paper, Select, TextField, Typography } from '@material-ui/core';
+import React, { useState } from 'react';
+import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import './assets/styles/App.css';
+import SaveIcon from '@material-ui/icons/Save';
+import PlayArrowIcon from '@material-ui/icons/PlayArrow';
+import AddIcon from '@material-ui/icons/Add';
 import { COLUMN_NAMES } from "./constants";
 import { tasks } from "./tasks";
+import { Column } from './components/Column';
+import { MovableItem } from './components/MovableItem';
 
-const MovableItem = ({name, index, currentColumnName, moveCardHandler, setItems}) => {
-    const changeItemColumn = (currentItem, columnName) => {
-        setItems((prevState) => {
-            return prevState.map(e => {
-                return {
-                    ...e,
-                    column: e.name === currentItem.name ? columnName : e.column,
-                }
-            })
-        });
-    }
-
-    const ref = useRef(null);
-
-    const [, drop] = useDrop({
-        accept: 'Our first type',
-        hover(item: any, monitor) {
-            if (!ref.current) {
-                return;
-            }
-            const dragIndex = item.index;
-            const hoverIndex = index;
-            // Don't replace items with themselves
-            if (dragIndex === hoverIndex) {
-                return;
-            }
-            // Determine rectangle on screen
-            const hoverBoundingRect = ref.current?.getBoundingClientRect();
-            // Get vertical middle
-            const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-            // Determine mouse position
-            const clientOffset = monitor.getClientOffset();
-            // Get pixels to the top
-            const hoverClientY = clientOffset.y - hoverBoundingRect.top;
-            // Only perform the move when the mouse has crossed half of the items height
-            // When dragging downwards, only move when the cursor is below 50%
-            // When dragging upwards, only move when the cursor is above 50%
-            // Dragging downwards
-            if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-                return;
-            }
-            // Dragging upwards
-            if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-                return;
-            }
-            // Time to actually perform the action
-            moveCardHandler(dragIndex, hoverIndex);
-            // Note: we're mutating the monitor item here!
-            // Generally it's better to avoid mutations,
-            // but it's good here for the sake of performance
-            // to avoid expensive index searches.
-            item.index = hoverIndex;
-        },
-    });
-
-    const [{isDragging}, drag] = useDrag({
-        item: {index, name, currentColumnName, type: 'Our first type'},
-        end: (item, monitor) => {
-            const dropResult = monitor.getDropResult();
-
-            if (dropResult) {
-                const {name} = dropResult;
-                const {DO_IT, IN_PROGRESS, AWAITING_REVIEW, DONE} = COLUMN_NAMES;
-                switch (name) {
-                    case IN_PROGRESS:
-                        changeItemColumn(item, IN_PROGRESS);
-                        break;
-                    case AWAITING_REVIEW:
-                        changeItemColumn(item, AWAITING_REVIEW);
-                        break;
-                    case DONE:
-                        changeItemColumn(item, DONE);
-                        break;
-                    case DO_IT:
-                        changeItemColumn(item, DO_IT);
-                        break;
-                    default:
-                        break;
-                }
-            }
-        },
-        collect: (monitor) => ({
-            isDragging: monitor.isDragging(),
-        }),
-    });
-
-    const opacity = isDragging ? 0.4 : 1;
-
-    drag(drop(ref));
-
-    return (
-        <div ref={ref} className='movable-item' style={{opacity}}>
-            {name}
-        </div>
-    )
-}
-
-const Column = ({children, className, title}) => {
-    const [{isOver, canDrop}, drop] = useDrop({
-        accept: 'Our first type',
-        drop: () => ({name: title}),
-        collect: (monitor) => ({
-            isOver: monitor.isOver(),
-            canDrop: monitor.canDrop(),
-        }),
-        // Override monitor.canDrop() function
-        canDrop: (item: any) => {
-            const {DO_IT, IN_PROGRESS, AWAITING_REVIEW, DONE} = COLUMN_NAMES;
-            const {currentColumnName} = item;
-            return (currentColumnName === title) ||
-                (currentColumnName === DO_IT && title === IN_PROGRESS) ||
-                (currentColumnName === IN_PROGRESS && (title === DO_IT || title === AWAITING_REVIEW)) ||
-                (currentColumnName === AWAITING_REVIEW && (title === IN_PROGRESS || title === DONE)) ||
-                (currentColumnName === DONE && (title === AWAITING_REVIEW));
-        },
-    });
-
-    const getBackgroundColor = () => {
-        if (isOver) {
-            if (canDrop) {
-                return 'rgb(188,251,255)'
-            } else if (!canDrop) {
-                return 'rgb(255,188,188)'
-            }
-        } else {
-            return '';
-        }
-    };
-
-    return (
-        <div ref={drop} className={className} style={{backgroundColor: getBackgroundColor()}}>
-            <p>{title}</p>
-            {children}
-        </div>
-    )
-}
+const useStyles = makeStyles((theme) => ({
+    paperContainer: {
+        padding: theme.spacing(2),
+        textAlign: 'center',
+        color: theme.palette.text.secondary,
+        width: '1200px',
+        marginLeft: 'auto',
+        marginRight: 'auto'
+    },
+    listItem: {
+        width: 50
+    },
+    paperItem: {
+        padding: theme.spacing(2),
+        textAlign: 'center',
+        color: theme.palette.text.secondary,
+        height: 540
+    },
+    formControl: {
+        margin: theme.spacing(1),
+        width: 'calc(100% - 50px)'
+    },
+}));
 
 export const App = () => {
+    const classes = useStyles();
     const [items, setItems] = useState(tasks);
+    const [age, setAge] = React.useState('');
+
+    const handleChange = (event: any) => {
+        setAge(event.target.value);
+    };
     const isMobile = window.innerWidth < 600;
 
     const moveCardHandler = (dragIndex, hoverIndex) => {
@@ -152,15 +51,15 @@ export const App = () => {
 
         if (dragItem) {
             setItems((prevState => {
-                const coppiedStateArray = [...prevState];
+                const copiedStateArray = [...prevState];
 
                 // remove item by "hoverIndex" and put "dragItem" instead
-                const prevItem = coppiedStateArray.splice(hoverIndex, 1, dragItem);
+                const prevItem = copiedStateArray.splice(hoverIndex, 1, dragItem);
 
                 // remove item by "dragIndex" and put "prevItem" instead
-                coppiedStateArray.splice(dragIndex, 1, prevItem[0]);
+                copiedStateArray.splice(dragIndex, 1, prevItem[0]);
 
-                return coppiedStateArray;
+                return copiedStateArray;
             }));
         }
     };
@@ -169,33 +68,92 @@ export const App = () => {
         return items
             .filter((item) => item.column === columnName)
             .map((item, index) => (
-                <MovableItem key={item.id}
-                             name={item.name}
-                             currentColumnName={item.column}
-                             setItems={setItems}
-                             index={index}
-                             moveCardHandler={moveCardHandler}
+                <MovableItem
+                    color={item.column === 'Available subjects' ? 'transparent' : item.color}
+                    id={item.id}
+                    key={item.id}
+                    name={item.name}
+                    currentColumnName={item.column}
+                    setItems={setItems}
+                    index={index}
+                    moveCardHandler={moveCardHandler}
                 />
             ))
     }
 
-    const {DO_IT, IN_PROGRESS, AWAITING_REVIEW, DONE} = COLUMN_NAMES;
+    const { DO_IT, IN_PROGRESS } = COLUMN_NAMES;
 
     return (
         <div className="container">
             <DndProvider backend={isMobile ? TouchBackend : HTML5Backend}>
-                <Column title={DO_IT} className='column do-it-column'>
-                    {returnItemsForColumn(DO_IT)}
-                </Column>
-                <Column title={IN_PROGRESS} className='column in-progress-column'>
-                    {returnItemsForColumn(IN_PROGRESS)}
-                </Column>
-                <Column title={AWAITING_REVIEW} className='column awaiting-review-column'>
-                    {returnItemsForColumn(AWAITING_REVIEW)}
-                </Column>
-                <Column title={DONE} className='column done-column'>
-                    {returnItemsForColumn(DONE)}
-                </Column>
+
+                <Paper className={classes.paperContainer}>
+                    <Typography>QuizCard Generator</Typography>
+                    <Grid container spacing={0}>
+                        <Grid item sm={6}>
+                            <div>
+                                <TextField className={classes.formControl} />
+                                <FormControl className={classes.formControl}>
+                                    <InputLabel id="demo-simple-select-label">Age</InputLabel>
+                                    <Select
+                                        labelId="demo-simple-select-label"
+                                        id="demo-simple-select"
+                                        value={age}
+                                        onChange={handleChange}
+                                    >
+                                        <MenuItem value={10}>Math</MenuItem>
+                                        <MenuItem value={20}>Twenty</MenuItem>
+                                        <MenuItem value={30}>Thirty</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl className={classes.formControl}>
+                                    <InputLabel id="demo-simple-select-label">Age</InputLabel>
+                                    <Select
+                                        labelId="demo-simple-select-label"
+                                        id="demo-simple-select"
+                                        value={age}
+                                        onChange={handleChange}
+                                    >
+                                        <MenuItem value={10}>Ten</MenuItem>
+                                        <MenuItem value={20}>Twenty</MenuItem>
+                                        <MenuItem value={30}>Thirty</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </div>
+                            <Column title={DO_IT} className={[classes.paperItem, 'do-it-column'].join(' ')}>
+                                {returnItemsForColumn(DO_IT)}
+                            </Column>
+                        </Grid>
+                        <Grid item sm={6}>
+                            <div style={{
+                                height: '176px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between'
+                            }}>
+                                <div style={{ width: "100%" }}>
+                                    <Button variant="contained" color="primary">
+                                        Add your own category <AddIcon />
+                                    </Button>
+                                </div>
+                                <div style={{ width: "100%" }}>
+                                    <IconButton color="primary">
+                                        <SaveIcon />
+                                    </IconButton>
+                                </div>
+                                <div style={{ width: "100%" }}>
+                                    <IconButton color="secondary">
+                                        <PlayArrowIcon />
+                                    </IconButton>
+                                </div>
+                            </div>
+
+                            <Column title={IN_PROGRESS} className={[classes.paperItem, ' in-progress-column'].join(' ')}>
+                                {returnItemsForColumn(IN_PROGRESS)}
+                            </Column>
+                        </Grid>
+                    </Grid>
+                </Paper>
             </DndProvider>
         </div>
     );
